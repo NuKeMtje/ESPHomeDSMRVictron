@@ -1,5 +1,5 @@
 # ESPHomeDSMRVictron
-Enable readout of a DSMR grid meter and export the data to Home Assistant and a Victron Energies GX device D-Bus
+Enable readout of a DSMR grid meter and export the data to Home Assistant and a Victron Energy GX device D-Bus
 
 Based on
 - https://github.com/hsteinhaus/esph-gadgets/blob/master/esphome/d0-meter.yaml
@@ -18,3 +18,5 @@ Needs https://github.com/freakent/dbus-mqtt-devices to work.
 The disadvantage of using this method is that when your MQTT-broker goes down the Victron ESS will no longer work as desired.
 
 I'll maybe add other configs later to add PV inverter data to a GX device via MQTT and Home Assistant. 
+
+If you are not using the Home Assistant part (only MQTT), you must remove the api: line from your ESPHome configuration, otherwise the ESP will reboot every 15 minutes because no client connected to the native API.
