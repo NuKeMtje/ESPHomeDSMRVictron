@@ -1,0 +1,342 @@
+substitutions:
+  device_name: "esp32_DSMR"
+  friendly_name: Grid meter
+  device_description: DSMR P1 to MQTT Grid meter interface
+
+esphome:
+  name: ${device_name}
+  comment: ${device_description}
+  platform: ESP32
+  board: nodemcu-32s
+
+wifi:
+  ssid: "yourssid"
+  password: !secret wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "ESP DSMR Fallback Hotspot"
+    password: !secret wifi_password_fallback
+
+  manual_ip:
+    static_ip: 192.168.10.100
+    gateway: 192.168.10.254
+    subnet: 255.255.255.0
+    dns1: 192.168.10.254
+
+captive_portal:
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+
+ota:
+
+uart:
+  baud_rate: 115200
+  rx_pin:
+    number: GPIO16
+    inverted: true
+  rx_buffer_size: 1500
+
+dsmr:
+  id: "dsmr1"
+
+globals:
+  - id: portal_id
+    type: std::string
+    restore_value: no
+    initial_value: '"<not set>"'
+  - id: device_instance
+    type: std::string
+    restore_value: no
+    initial_value: '"<not set>"'
+
+mqtt:
+  broker: 192.168.10.4
+  username: ess
+  password: victron
+  discovery: false
+  birth_message:
+    topic: device/p1mqtt/Status
+    payload: "{ \"clientId\": \"p1mqtt\", \"connected\": 1, \"version\": \"v1.0\", \"services\": {\"meter1\": \"grid\"} }"
+  will_message:
+    topic: device/p1mqtt/Status
+    payload: "{ \"clientId\": \"p1mqtt\", \"connected\": 0, \"services\": {\"meter1\": \"grid\"} }"
+  on_json_message:
+    topic: device/p1mqtt/DBus
+    then:
+      - lambda: |-
+          id(portal_id) = x["portalId"].as<std::string>();
+          id(device_instance) = x["deviceInstance"]["meter1"].as<std::string>();
+      - mqtt.publish_json:
+          topic: !lambda |-
+            return str_sprintf("W/%s/grid/%s/CustomName", id(portal_id).c_str(), id(device_instance).c_str());
+          payload: |-
+            root["value"] = "P1-MQTT Meter";
+      - mqtt.publish_json:
+          topic: !lambda |-
+            return str_sprintf("W/%s/grid/%s/Role", id(portal_id).c_str(), id(device_instance).c_str());
+          payload: |-
+            root["value"] = "grid";
+
+
+sensor:
+  - platform: template
+    name: "Total power"
+    id: total_power
+    lambda: |-
+      return (id(power_consumed).state - id(power_produced).state)*1000.0;
+    update_interval: 1s
+    device_class: power
+    state_class: measurement
+    unit_of_measurement: W
+    on_value:
+      then:
+        - mqtt.publish_json:
+            topic: !lambda |-
+              return str_sprintf("W/%s/grid/%s/Ac/Power", id(portal_id).c_str(), id(device_instance).c_str());
+            payload: |-
+              root["value"] = id(total_power).state;
+  - platform: template
+    name: "Power L1"
+    id: power_l1
+    lambda: |-
+      return (id(power_con_l1).state - id(power_inj_l1).state)*1000.0;
+    update_interval: 1s
+    device_class: power
+    state_class: measurement
+    unit_of_measurement: W
+    on_value:
+      then:
+        - mqtt.publish_json:
+            topic: !lambda |-
+              return str_sprintf("W/%s/grid/%s/Ac/L1/Power", id(portal_id).c_str(), id(device_instance).c_str());
+            payload: |-
+              root["value"] = id(power_l1).state;    
+  - platform: template
+    name: "Power L2"
+    id: power_l2
+    lambda: |-
+      return (id(power_con_l2).state - id(power_inj_l2).state)*1000.0;
+    update_interval: 1s
+    device_class: power
+    state_class: measurement
+    unit_of_measurement: W
+    on_value:
+      then:
+        - mqtt.publish_json:
+            topic: !lambda |-
+              return str_sprintf("W/%s/grid/%s/Ac/L2/Power", id(portal_id).c_str(), id(device_instance).c_str());
+            payload: |-
+              root["value"] = id(power_l2).state;
+  - platform: template
+    name: "Power L3"
+    id: power_l3
+    lambda: |-
+      return (id(power_con_l3).state - id(power_inj_l3).state)*1000.0;
+    update_interval: 1s
+    device_class: power
+    state_class: measurement
+    unit_of_measurement: W
+    on_value:
+      then:
+        - mqtt.publish_json:
+            topic: !lambda |-
+              return str_sprintf("W/%s/grid/%s/Ac/L3/Power", id(portal_id).c_str(), id(device_instance).c_str());
+            payload: |-
+              root["value"] = id(power_l3).state;                                       
+  - platform: template
+    name: "Total consumed"
+    id: total_consumed
+    lambda: |-
+      return id(energy_consumed_t1).state + id(energy_consumed_t2).state;
+    update_interval: 1s
+    device_class: energy
+    state_class: total_increasing
+    unit_of_measurement: kWh
+    on_value:
+      then:
+        - mqtt.publish_json:
+            topic: !lambda |-
+              return str_sprintf("W/%s/grid/%s/Ac/Energy/Forward", id(portal_id).c_str(), id(device_instance).c_str());
+            payload: |-
+              root["value"] = id(total_consumed).state;    
+  - platform: template
+    name: "Total injected"
+    id: total_injected
+    lambda: |-
+      return id(energy_produced_t1).state + id(energy_produced_t2).state;
+    update_interval: 1s
+    device_class: energy
+    state_class: total_increasing
+    unit_of_measurement: kWh
+    on_value:
+      then:
+        - mqtt.publish_json:
+            topic: !lambda |-
+              return str_sprintf("W/%s/grid/%s/Ac/Energy/Reverse", id(portal_id).c_str(), id(device_instance).c_str());
+            payload: |-
+              root["value"] = id(total_injected).state;
+  - platform: dsmr
+    energy_delivered_tariff1:
+      name: "Energy Consumed Tariff 1"
+      id: energy_consumed_t1
+      state_class: total_increasing
+    energy_delivered_tariff2:
+      name: "Energy Consumed Tariff 2"
+      id: energy_consumed_t2
+      state_class: total_increasing
+    energy_returned_tariff1:
+      name: "Energy Produced Tariff 1"
+      id: energy_produced_t1
+      state_class: total_increasing
+    energy_returned_tariff2:
+      name: "Energy Produced Tariff 2"
+      id: energy_produced_t2
+      state_class: total_increasing
+    power_delivered:
+      name: "Power Consumed"
+      id: power_consumed
+      accuracy_decimals: 3
+    power_returned:
+      name: "Power Produced"
+      id: power_produced
+      accuracy_decimals: 3
+    electricity_failures:
+      name: "Electricity Failures"
+      icon: mdi:alert
+    electricity_long_failures:
+      name: "Long Electricity Failures"
+      icon: mdi:alert
+    voltage_l1:
+      name: "Voltage Phase 1"
+      id: voltage_l1
+      on_value:
+        then:
+          - mqtt.publish_json:
+              topic: !lambda |-
+                return str_sprintf("W/%s/grid/%s/Ac/L1/Voltage", id(portal_id).c_str(), id(device_instance).c_str());
+              payload: |-
+                root["value"] = id(voltage_l1).state;
+    voltage_l2:
+      name: "Voltage Phase 2"
+      id: voltage_l2
+      on_value:
+        then:
+          - mqtt.publish_json:
+              topic: !lambda |-
+                return str_sprintf("W/%s/grid/%s/Ac/L2/Voltage", id(portal_id).c_str(), id(device_instance).c_str());
+              payload: |-
+                root["value"] = id(voltage_l2).state;
+    voltage_l3:
+      name: "Voltage Phase 3"
+      id: voltage_l3
+      on_value:
+        then:
+          - mqtt.publish_json:
+              topic: !lambda |-
+                return str_sprintf("W/%s/grid/%s/Ac/L3/Voltage", id(portal_id).c_str(), id(device_instance).c_str());
+              payload: |-
+                root["value"] = id(voltage_l3).state;
+    current_l1:
+      name: "Current Phase 1"
+      id: current_l1
+      on_value:
+        then:
+          - mqtt.publish_json:
+              topic: !lambda |-
+                return str_sprintf("W/%s/grid/%s/Ac/L1/Current", id(portal_id).c_str(), id(device_instance).c_str());
+              payload: |-
+                root["value"] = id(current_l1).state;
+    current_l2:
+      name: "Current Phase 2"
+      id: current_l2
+      on_value:
+        then:
+          - mqtt.publish_json:
+              topic: !lambda |-
+                return str_sprintf("W/%s/grid/%s/Ac/L2/Current", id(portal_id).c_str(), id(device_instance).c_str());
+              payload: |-
+                root["value"] = id(current_l2).state;
+    current_l3:
+      name: "Current Phase 3"
+      id: current_l3
+      on_value:
+        then:
+          - mqtt.publish_json:
+              topic: !lambda |-
+                return str_sprintf("W/%s/grid/%s/Ac/L3/Current", id(portal_id).c_str(), id(device_instance).c_str());
+              payload: |-
+                root["value"] = id(current_l3).state;
+    power_delivered_l1:
+      name: "Power Consumed Phase 1"
+      id: power_con_l1
+      accuracy_decimals: 3
+    power_delivered_l2:
+      name: "Power Consumed Phase 2"
+      id: power_con_l2
+      accuracy_decimals: 3
+    power_delivered_l3:
+      name: "Power Consumed Phase 3"
+      id: power_con_l3
+      accuracy_decimals: 3
+    power_returned_l1:
+      name: "Power Produced Phase 1"
+      id: power_inj_l1
+      accuracy_decimals: 3
+    power_returned_l2:
+      name: "Power Produced Phase 2"
+      id: power_inj_l2
+      accuracy_decimals: 3
+    power_returned_l3:
+      name: "Power Produced Phase 3"
+      id: power_inj_l3
+      accuracy_decimals: 3
+    gas_delivered_be:
+      name: "Gas Consumed Belgium"
+      state_class: total_increasing
+  - platform: uptime
+    name: "ESP DSMR Uptime"
+  - platform: wifi_signal
+    name: "ESP DSMR Wi-Fi Signal"
+    update_interval: 60s
+ 
+text_sensor:
+  - platform: dsmr
+    identification:
+      name: "DSMR Identification"
+      id: meter_id
+      on_value:
+        then:
+          - mqtt.publish_json:
+              topic: !lambda |-
+                return str_sprintf("W/%s/grid/%s/Serial", id(portal_id).c_str(), id(device_instance).c_str());
+              payload: |-
+                root["value"] = id(meter_id).state;
+    p1_version_be:
+      name: "DSMR Version Belgium"
+  - platform: wifi_info
+    ip_address:
+      name: "ESP DSMR IP Address"
+    ssid:
+      name: "ESP DSMR Wi-Fi SSID"
+    bssid:
+      name: "ESP DSMR Wi-Fi BSSID"
+  - platform: version
+    name: "ESPHome Version"
+    hide_timestamp: true
+  - platform: mqtt_subscribe
+    name: "Device status"
+    id: device_status
+    topic: device/p1mqtt/DBus    
+
+binary_sensor:
+  - platform: status
+    name: "ESP DSMR Status"       
+
+switch:
+  - platform: restart
+    name: "Restart ESP DSMR"    
