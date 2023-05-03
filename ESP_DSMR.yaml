@@ -55,9 +55,9 @@ globals:
     initial_value: '"<not set>"'
 
 mqtt:
-  broker: 192.168.10.4
-  username: ess
-  password: victron
+  broker: ipaddress_broker_here
+  username: usernameifneeded_or_remove_whole_line
+  password: passwordifneeded_or_remove_whole_line
   discovery: false
   birth_message:
     topic: device/p1mqtt/Status
