@@ -12,7 +12,7 @@ Using and needed on GX-device:
 For the connection and wiring, please see: https://github.com/bartwo/esp32_p1meter#circuit-diagram
 
 ## Victron GX integration
-Remains untested (I don't have an installation yet, but will maybe try on a Raspberry Pi or by a Victron setup in the future).
+Remains untested (I don't have an installation yet, but will maybe try on a Raspberry Pi or buy a Victron setup in the future).
 Needs https://github.com/freakent/dbus-mqtt-devices to work.
 
 The disadvantage of using this method is that when your MQTT-broker goes down the Victron ESS will no longer work as desired.
