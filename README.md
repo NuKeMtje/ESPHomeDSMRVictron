@@ -12,11 +12,25 @@ Using and needed on GX-device:
 For the connection and wiring, please see: https://github.com/bartwo/esp32_p1meter#circuit-diagram
 
 ## Victron GX integration
-Remains untested (I don't have an installation yet, but will maybe try on a Raspberry Pi or buy a Victron setup in the future).
-Needs https://github.com/freakent/dbus-mqtt-devices to work.
-
-The disadvantage of using this method is that when your MQTT-broker goes down the Victron ESS will no longer work as desired.
-
-I'll maybe add other configs later to add PV inverter data to a GX device via MQTT and Home Assistant. 
+To work, this needs
+- https://github.com/freakent/dbus-mqtt-devices
+- MQTT broker on the Victron controller to be active:
+![Victron main view](/images/EnableMQTT.JPG)
 
 If you are not using the Home Assistant part (only MQTT), you must remove the api: line from your ESPHome configuration, otherwise the ESP will reboot every 15 minutes because no client connected to the native API.
+
+I tested this on a Raspberry Pi with Venus OS, but I don't have a Victron setup (yet). The meter shows up like expected, but was not yet tested on a full ESS system:
+
+![Victron main view](/images/overview.JPG)
+
+![Victron main view](/images/Victron_Main.JPG)
+
+![Victron main view](/images/Meter1.JPG)
+
+![Victron main view](/images/meter2.JPG)
+
+![Victron main view](/images/device1.JPG)
+
+![Victron main view](/images/device2.JPG)
+
+I'll maybe add other configs later to add PV inverter data to a GX device via MQTT and Home Assistant. 
