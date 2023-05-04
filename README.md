@@ -36,7 +36,7 @@ I tested this on a Raspberry Pi with Venus OS, but I don't have a Victron setup 
 I'll maybe add other configs later to add PV inverter data to a GX device via MQTT and Home Assistant. 
 
 ## Disclaimer
-I'm not responsible for damage or financial loss due to using of this configuration. 
+I'm not responsible for possible damage or financial loss due to the usage of this configuration. 
 
 A note for Belgian users:
 https://userbase.be/forum/viewtopic.php?p=961196#p961196
