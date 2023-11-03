@@ -1,6 +1,8 @@
 # ESPHomeDSMRVictron
 Enable readout of a DSMR grid meter and export the data to Home Assistant and a Victron Energy GX device D-Bus
 
+Keywords: P1 DSMR Victron ESS VenusOS MQTT ESPHome Cerbo GX Grid meter
+
 Based on
 - https://github.com/hsteinhaus/esph-gadgets/blob/master/esphome/d0-meter.yaml
 - https://www.zuidwijk.com/slimmelezer-configuration/
